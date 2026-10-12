@@ -1,0 +1,130 @@
+# Инфраструктура для локальной разработки.
+# Лимиты подобраны под слабую машину (2 ядра / 16 ГБ) — не снимай их не подумав.
+name: gomarket
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: gomarket-postgres
+    environment:
+      POSTGRES_USER: gomarket
+      POSTGRES_PASSWORD: gomarket
+      POSTGRES_DB: postgres
+    # database-per-service: одна инстанция, отдельная база на каждый сервис.
+    # Ходить в чужую базу запрещено — см. CLAUDE.md.
+    command: >
+      postgres
+      -c shared_buffers=256MB
+      -c max_connections=100
+      -c log_min_duration_statement=200ms
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./config/postgres-init.sql:/docker-entrypoint-initdb.d/10-databases.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gomarket"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources:
+        limits: { memory: 768M }
+
+  redis:
+    image: redis:7-alpine
+    container_name: gomarket-redis
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru --save ""
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources:
+        limits: { memory: 192M }
+
+  redpanda:
+    image: redpandadata/redpanda:v25.1.1
+    container_name: gomarket-redpanda
+    # --overprovisioned обязателен: без него Seastar занимается busy-polling
+    # и съедает целое ядро в простое.
+    command:
+      - redpanda start
+      - --overprovisioned
+      - --smp 1
+      - --memory 1G
+      - --reserve-memory 0M
+      - --node-id 0
+      - --check=false
+      - --kafka-addr PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
+      - --advertise-kafka-addr PLAINTEXT://redpanda:29092,OUTSIDE://localhost:9092
+    ports:
+      - "9092:9092"
+      - "9644:9644"
+    volumes:
+      - redpanda-data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits: { memory: 1280M }
+
+  console:
+    image: redpandadata/console:v3.0.0
+    container_name: gomarket-console
+    environment:
+      KAFKA_BROKERS: redpanda:29092
+    ports:
+      - "8090:8080"
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits: { memory: 256M }
+
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    container_name: gomarket-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=3d
+      - --storage.tsdb.retention.size=2GB
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    deploy:
+      resources:
+        limits: { memory: 512M }
+
+  grafana:
+    image: grafana/grafana:11.5.1
+    container_name: gomarket-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    volumes:
+      - ./config/grafana-datasources.yml:/etc/grafana/provisioning/datasources/prometheus.yml:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    deploy:
+      resources:
+        limits: { memory: 256M }
+
+volumes:
+  postgres-data:
+  redpanda-data:
+  prometheus-data:
+  grafana-data:
