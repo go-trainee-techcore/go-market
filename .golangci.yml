@@ -1,0 +1,85 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: none
+  enable:
+    # корректность
+    - errcheck        # непроверенные ошибки
+    - govet
+    - staticcheck
+    - ineffassign
+    - errorlint       # правильное сравнение/обёртка ошибок
+    - bodyclose       # незакрытый resp.Body
+    - rowserrcheck    # незакрытый rows.Err()
+    - sqlclosecheck   # незакрытые rows/stmt
+    - contextcheck    # потерянный context
+    - noctx           # HTTP-запрос без context
+    - nilerr          # return nil при ненулевой ошибке
+    - makezero
+    # безопасность
+    - gosec
+    # стиль и читаемость
+    - revive
+    - gocritic
+    - misspell
+    - unconvert
+    - unparam
+    - wastedassign
+    - godot
+    - unused
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+        - name: context-as-argument
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: indent-error-flow
+        - name: var-naming
+        - name: unreachable-code
+    gosec:
+      excludes:
+        - G104  # дубль errcheck
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+      disabled-checks:
+        - hugeParam
+        - rangeValCopy
+
+  exclusions:
+    rules:
+      # в тестах допускаем вольности
+      - path: _test\.go
+        linters:
+          - gosec
+          - unparam
+          - errcheck
+      # сгенерированный код не проверяем
+      - path: \.pb\.go
+        linters:
+          - all
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/go-trainee-techcore/go-market

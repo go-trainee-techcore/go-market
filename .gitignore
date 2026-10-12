@@ -1,0 +1,24 @@
+# Секреты — никогда в git
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+!**/testdata/*.key
+
+# Сборка
+/bin/
+/dist/
+*.exe
+coverage.out
+coverage.html
+
+# Инструменты
+/.task/
+/tmp/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store

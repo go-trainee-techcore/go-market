@@ -1,0 +1,24 @@
+# Кто обязан апрувнуть PR, затрагивающий эти пути.
+#
+# maxon2034 — Максим, Valofelka — Лера.
+# mentors — команда менторов организации. Пока там один Федя; на время его
+# отсутствия в команду добавляется замещающий ментор, а файл не меняется.
+
+# По умолчанию ревьюят друг друга
+*                       @maxon2034 @Valofelka
+
+# Общий код и контракты — только через ментора: сломать их можно
+# сразу для всех сервисов
+/shared/                @go-trainee-techcore/mentors
+/proto/                 @go-trainee-techcore/mentors
+/.github/               @go-trainee-techcore/mentors
+/CLAUDE.md              @go-trainee-techcore/mentors
+/Taskfile.yml           @go-trainee-techcore/mentors
+/deploy/                @go-trainee-techcore/mentors
+/scripts/               @go-trainee-techcore/mentors
+
+# Сага — самое сложное место проекта
+/services/order/        @go-trainee-techcore/mentors
+
+# Эталонный сервис: меняется только вместе с конвенциями
+/services/example/      @go-trainee-techcore/mentors

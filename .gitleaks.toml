@@ -1,0 +1,11 @@
+[extend]
+useDefault = true
+
+[[rules]]
+id = "url-with-credentials"
+description = "Логин и пароль прямо в URL подключения"
+regex = '''[a-zA-Z][a-zA-Z0-9+.-]*://[^\s/:@'"]+:[^\s/:@'"]+@[^\s/'"]+'''
+
+[allowlist]
+description = "Учебные креды локальной инфраструктуры из docker-compose"
+regexes = ['''gomarket:gomarket@localhost''']
