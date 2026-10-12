@@ -8,7 +8,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
@@ -73,17 +72,8 @@ func (r *Widget) List(ctx context.Context, limit, offset int) ([]entity.Widget, 
 func (r *Widget) Delete(ctx context.Context, id uuid.UUID) error {
 	const q = `DELETE FROM widgets WHERE id = $1`
 
-	res, err := r.db.ExecContext(ctx, q, id)
-	if err != nil {
+	if _, err := r.db.ExecContext(ctx, q, id); err != nil {
 		return apperr.Wrap(err, apperr.KindInternal, "db_error", "ошибка удаления из базы")
-	}
-
-	affected, err := res.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("подсчёт затронутых строк: %w", err)
-	}
-	if affected == 0 {
-		return entity.ErrWidgetNotFound
 	}
 	return nil
 }

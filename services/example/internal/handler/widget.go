@@ -74,18 +74,25 @@ func (h *Widget) Create(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusCreated, toResponse(created))
 }
 
-func (h *Widget) Get(w http.ResponseWriter, r *http.Request) {
+// parseID достаёт идентификатор виджета из пути.
+func parseID(r *http.Request) (uuid.UUID, error) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		httpx.WriteError(w, r, h.log,
-			apperr.Wrap(err, apperr.KindInvalid, "invalid_id", "идентификатор не является UUID"))
+		return uuid.Nil, apperr.Wrap(err, apperr.KindInternal, "invalid_id", "идентификатор не является UUID")
+	}
+	return id, nil
+}
+
+func (h *Widget) Get(w http.ResponseWriter, r *http.Request) {
+	id, err := parseID(r)
+	if err != nil {
+		httpx.WriteError(w, r, h.log, err)
 		return
 	}
 
 	found, err := h.svc.GetByID(r.Context(), id)
 	if err != nil {
 		httpx.WriteError(w, r, h.log, err)
-		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, toResponse(found))
 }
@@ -110,10 +117,9 @@ func (h *Widget) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Widget) Delete(w http.ResponseWriter, r *http.Request) {
-	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	id, err := parseID(r)
 	if err != nil {
-		httpx.WriteError(w, r, h.log,
-			apperr.Wrap(err, apperr.KindInvalid, "invalid_id", "идентификатор не является UUID"))
+		httpx.WriteError(w, r, h.log, err)
 		return
 	}
 
