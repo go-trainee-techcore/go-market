@@ -12,6 +12,7 @@
 /shared/                @go-trainee-techcore/mentors
 /proto/                 @go-trainee-techcore/mentors
 /.github/               @go-trainee-techcore/mentors
+/.claude/               @go-trainee-techcore/mentors
 /CLAUDE.md              @go-trainee-techcore/mentors
 /Taskfile.yml           @go-trainee-techcore/mentors
 /deploy/                @go-trainee-techcore/mentors

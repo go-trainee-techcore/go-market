@@ -362,9 +362,14 @@ task check
 
    Замечания бота разбери: исправь или ответь в треде, почему нет. Бот ошибается,
    но молча игнорировать нельзя.
+
+   Ту же проверку можно прогнать у себя до PR: в Claude Code —
+   `/pr-review go-trainee-techcore/go-market/pull/<номер>`. Без флага `--comment`
+   она только выведет находки в терминал и ничего не опубликует. Правила
+   ревью — в [`.claude/skills/pr-review/SKILL.md`](../.claude/skills/pr-review/SKILL.md).
 8. **Ревью напарника — обязательно.** Новый пуш сбрасывает апрув: после правок
    нужен повторный.
-9. **Пути ментора.** PR, который трогает `shared/`, `proto/`, `.github/`,
+9. **Пути ментора.** PR, который трогает `shared/`, `proto/`, `.github/`, `.claude/`,
    `deploy/`, `scripts/`, `CLAUDE.md`, `Taskfile.yml`, `services/order/` или
    `services/example/`, требует апрува ментора — так настроен
    [`CODEOWNERS`](../.github/CODEOWNERS). Остальное мержите сами.
