@@ -37,15 +37,22 @@ gh api -X PUT orgs/go-trainee-techcore/teams/mentors/repos/$R -f permission=push
 `privacy=closed` — это видимая команда; секретные в CODEOWNERS не работают.
 Право записи команде нужно выдать явно, даже если у участников оно уже есть.
 
-**1.2. Ключ для ревью-бота.** В Claude Console: отдельный workspace
-`gomarket-ci`, в нём API-ключ, месячный лимит трат $30. Затем:
+**1.2. Ревью-бот на твоей подписке.** Бот работает по запросу — когда на PR
+вешают метку `claude-review`, — и на Sonnet, чтобы меньше тратить лимит:
 
 ```bash
-gh secret set ANTHROPIC_API_KEY -R $R
+claude setup-token                                  # долгоживущий токен подписки
+gh secret set CLAUDE_CODE_OAUTH_TOKEN -R $R
+gh label create claude-review -R $R --color 7057FF --description "Запросить ревью от Claude"
 ```
 
-Без секрета проверка «Ревью от Claude» будет падать — мерж она не блокирует,
-но краснеет.
+Лимит подписки общий с твоей собственной работой в Claude и Claude Code.
+Расход видно в claude.ai → Settings → Usage; если перестанет хватать — usage
+credits, Max или API-ключ (`ANTHROPIC_API_KEY` и `anthropic_api_key` в workflow).
+
+Токен — это доступ к твоей подписке. Любой с правом записи технически может
+вытащить секрет через workflow в своей ветке, поэтому, если кто-то уйдёт из
+команды, перевыпусти токен.
 
 **1.3. Настройки репы.**
 

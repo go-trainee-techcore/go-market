@@ -1,15 +1,16 @@
 name: Ревью от Claude
 
-# Только на открытие PR и снятие черновика — не на каждый пуш.
-# Повторное ревью после правок запрашивается комментарием @claude.
+# Ревью по запросу: повесь на PR метку claude-review. После ревью метка
+# снимается сама — чтобы попросить ещё раз после правок, повесь её снова.
+#
+# Не на каждый PR, потому что бот работает на подписке ментора, и лимит у неё
+# общий с его собственной работой.
+#
+# Метка, а не команда в комментарии: на событие pull_request GitHub сам
+# запускает workflow на коде PR, а PR из форков секретов не получают.
 on:
   pull_request:
-    types: [opened, ready_for_review]
-    paths-ignore:
-      - "**/*.pb.go"
-      - "**/mocks/**"
-      - "docs/**"
-      - "**/*.md"
+    types: [labeled]
 
 concurrency:
   group: review-${{ github.event.pull_request.number }}
@@ -17,12 +18,13 @@ concurrency:
 
 jobs:
   review:
+    if: github.event.label.name == 'claude-review'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     permissions:
       contents: read
-      pull-requests: read
-      issues: read
+      issues: write         # снять метку после ревью
+      pull-requests: write  # снять метку после ревью
       id-token: write
     steps:
       - uses: actions/checkout@v4
@@ -31,11 +33,19 @@ jobs:
 
       - uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
           plugins: "code-review@claude-code-plugins"
           prompt: "/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
+          # sonnet — алиас последней Sonnet: при выходе новой версии
+          # ничего не нужно менять.
           claude_args: >-
-            --model claude-sonnet-5
+            --model sonnet
             --max-turns 12
             --allowedTools "mcp__github_inline_comment__create_inline_comment"
+
+      - name: Снять метку, чтобы ревью можно было запросить снова
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr edit "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" --remove-label claude-review

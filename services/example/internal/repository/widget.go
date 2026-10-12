@@ -60,8 +60,10 @@ func (r *Widget) List(ctx context.Context, limit, offset int) ([]entity.Widget, 
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2`
 
-	// Ненулевой срез: пустой список должен сериализоваться в [], а не в null.
-	items := make([]entity.Widget, 0, limit)
+	// Ёмкость не задаём заранее по limit: он приходит из запроса, и выделять
+	// память под размер, который прислал клиент, нельзя — даже если сервис
+	// его ограничивает. CodeQL справедливо ловит это как go/uncontrolled-allocation-size.
+	var items []entity.Widget
 	if err := r.db.SelectContext(ctx, &items, q, limit, offset); err != nil {
 		return nil, apperr.Wrap(err, apperr.KindInternal, "db_error", "ошибка чтения из базы")
 	}
