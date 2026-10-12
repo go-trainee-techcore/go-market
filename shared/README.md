@@ -492,6 +492,17 @@ res, err := r.db.ExecContext(ctx, `DELETE FROM cart_items WHERE id = $1`, itemID
 - поля структуры размечаются тегами `db:"..."`;
 - `SelectContext` на пустой выборке возвращает пустой срез без ошибки, а **не**
   `sql.ErrNoRows`. `ErrNoRows` бывает только у `GetContext`.
+- **`UPDATE` и `DELETE` по id — проверяй `RowsAffected`.** Если затронуто 0
+  строк, записи не было: верни доменную «не найдено». Без этой проверки удаление
+  несуществующей записи выглядит успешным, и клиент получает 204 вместо 404:
+
+  ```go
+  res, err := r.db.ExecContext(ctx, `DELETE FROM widgets WHERE id = $1`, id)
+  // ...
+  if affected, err := res.RowsAffected(); err != nil { ... } else if affected == 0 {
+  	return entity.ErrWidgetNotFound
+  }
+  ```
 
 ### Транзакции
 
