@@ -369,84 +369,125 @@ components:
 
     Error:
       type: object
+      description: Unified error response envelope.
+      required:
+        - error
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorBody'
+
+    ErrorBody:
+      type: object
       required:
         - code
         - message
       properties:
         code:
           type: string
+          description: Machine-readable error code.
           example: "VALIDATION_ERROR"
         message:
           type: string
+          description: Human-readable error description.
           example: "Invalid field format"
+        request_id:
+          type: string
+          description: Request identifier for tracing. Omitted if not available.
+          example: "9b2f6c1e-4d7a-4f5e-8a3b-1c2d3e4f5a6b"
 
   responses:
     BadRequest:
-      description: Bad Request (KindInvalid)
+      description: >-
+        Bad Request (KindInvalid). The client sent invalid data:
+        empty name, malformed email or UUID, password too short.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
           example:
-            code: "VALIDATION_ERROR"
-            message: "Invalid input parameters provided"
+            error:
+              code: "VALIDATION_ERROR"
+              message: "Invalid request data: field 'email' has an invalid format"
+              request_id: "9b2f6c1e-4d7a-4f5e-8a3b-1c2d3e4f5a6b"
 
     Unauthorized:
-      description: Unauthorized (KindUnauthenticated)
+      description: >-
+        Unauthorized (KindUnauthenticated). The user is not identified:
+        the token is missing, expired or invalid, or the credentials are wrong.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
           example:
-            code: "TOKEN_EXPIRED"
-            message: "Access token has expired or is invalid"
+            error:
+              code: "UNAUTHENTICATED"
+              message: "User is not authenticated: token is missing, expired or invalid"
+              request_id: "9b2f6c1e-4d7a-4f5e-8a3b-1c2d3e4f5a6b"
 
     Forbidden:
-      description: Forbidden (KindForbidden)
+      description: >-
+        Forbidden (KindForbidden). The user is known, but lacks permission:
+        the required role is missing.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
           example:
-            code: "ACCESS_DENIED"
-            message: "Insufficient permissions to perform this action"
+            error:
+              code: "FORBIDDEN"
+              message: "Insufficient permissions: role 'admin' is required"
+              request_id: "9b2f6c1e-4d7a-4f5e-8a3b-1c2d3e4f5a6b"
 
     NotFound:
-      description: Not Found (KindNotFound)
+      description: Not Found (KindNotFound). The requested entity does not exist.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
           example:
-            code: "USER_NOT_FOUND"
-            message: "Requested user was not found"
+            error:
+              code: "USER_NOT_FOUND"
+              message: "User not found"
+              request_id: "9b2f6c1e-4d7a-4f5e-8a3b-1c2d3e4f5a6b"
 
     Conflict:
-      description: Conflict (KindConflict)
+      description: >-
+        Conflict (KindConflict). The current state does not allow the operation:
+        for example, a user with this email already exists.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
           example:
-            code: "USER_ALREADY_EXISTS"
-            message: "User with this email already exists"
+            error:
+              code: "USER_ALREADY_EXISTS"
+              message: "Operation conflicts with current state: user with this email already exists"
+              request_id: "9b2f6c1e-4d7a-4f5e-8a3b-1c2d3e4f5a6b"
 
     ServiceUnavailable:
-      description: Service Unavailable (KindUnavailable)
+      description: >-
+        Service Unavailable (KindUnavailable). A dependency is unavailable
+        or the circuit breaker is open. The request can be retried.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
           example:
-            code: "SERVICE_UNAVAILABLE"
-            message: "Service is temporarily unavailable"
+            error:
+              code: "SERVICE_UNAVAILABLE"
+              message: "A dependent service is temporarily unavailable, please retry later"
+              request_id: "9b2f6c1e-4d7a-4f5e-8a3b-1c2d3e4f5a6b"
 
     InternalError:
-      description: Internal Server Error (KindInternal)
+      description: >-
+        Internal Server Error (KindInternal). Any other failure:
+        database error, unexpected bug.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
           example:
-            code: "INTERNAL_ERROR"
-            message: "An internal server error occurred"
+            error:
+              code: "INTERNAL_ERROR"
+              message: "An internal server error occurred"
+              request_id: "9b2f6c1e-4d7a-4f5e-8a3b-1c2d3e4f5a6b"
