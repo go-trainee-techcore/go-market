@@ -1,0 +1,493 @@
+openapi: 3.0.3
+info:
+  title: Auth & User Management Service API
+  version: 1.0.0
+  description: API for authentication, profile and role management, and token verification for NGINX auth_request.
+
+paths:
+  /auth/register:
+    post:
+      summary: User registration
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+                - phone
+                - password
+              properties:
+                name:
+                  type: string
+                  example: "John Doe"
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                phone:
+                  type: string
+                  example: "+1234567890"
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: "StrongP@ss1"
+      responses:
+        '201':
+          description: Successful registration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /auth/login:
+    post:
+      summary: User login (Authentication)
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /auth/refresh:
+    post:
+      summary: Refresh tokens
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refresh_token
+              properties:
+                refresh_token:
+                  type: string
+                  example: "d3b07384d113edec49eaa6238ad5ff00..."
+      responses:
+        '200':
+          description: Tokens successfully refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /auth/logout:
+    post:
+      summary: User logout (Revoke refresh token)
+      tags:
+        - Auth
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refresh_token
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        '204':
+          description: Successful logout
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /profile:
+    get:
+      summary: Get current user profile
+      tags:
+        - Profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Profile details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      summary: Update profile details
+      tags:
+        - Profile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+      responses:
+        '200':
+          description: Profile successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      summary: Delete user account
+      tags:
+        - Profile
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Account successfully deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /profile/password:
+    post:
+      summary: Change password
+      tags:
+        - Profile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - old_password
+                - new_password
+              properties:
+                old_password:
+                  type: string
+                  format: password
+                new_password:
+                  type: string
+                  format: password
+                  minLength: 8
+      responses:
+        '204':
+          description: Password successfully changed
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/users/{id}/roles:
+    post:
+      summary: Assign roles to user (Admin only)
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - roles
+              properties:
+                roles:
+                  type: array
+                  items:
+                    type: string
+                  example: ["user", "admin"]
+      responses:
+        '204':
+          description: Roles successfully assigned
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /internal/auth/verify:
+    get:
+      summary: Token verification for NGINX auth_request
+      description: Endpoint for API Gateway / NGINX. Validates Authorization header and returns 200 with custom headers or 401.
+      tags:
+        - Internal
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: "Bearer token in format: Bearer <access_token>"
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Token is valid. NGINX will forward the request.
+          headers:
+            X-User-Id:
+              schema:
+                type: string
+                format: uuid
+              description: User ID extracted from token
+            X-User-Roles:
+              schema:
+                type: string
+              description: Comma-separated user roles (e.g., "user,admin")
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    AuthResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      description: Unified error response envelope.
+      required:
+        - error
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorBody'
+
+    ErrorBody:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code.
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          description: Human-readable error description.
+          example: "Invalid field format"
+        request_id:
+          type: string
+          description: Request identifier for tracing. Omitted if not available.
+          example: "9b2f6c1e-4d7a-4f5e-8a3b-1c2d3e4f5a6b"
+
+  responses:
+    BadRequest:
+      description: >-
+        Bad Request (KindInvalid). The client sent invalid data:
+        empty name, malformed email or UUID, password too short.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "VALIDATION_ERROR"
+              message: "Invalid request data: field 'email' has an invalid format"
+              request_id: "9b2f6c1e-4d7a-4f5e-8a3b-1c2d3e4f5a6b"
+
+    Unauthorized:
+      description: >-
+        Unauthorized (KindUnauthenticated). The user is not identified:
+        the token is missing, expired or invalid, or the credentials are wrong.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "UNAUTHENTICATED"
+              message: "User is not authenticated: token is missing, expired or invalid"
+              request_id: "9b2f6c1e-4d7a-4f5e-8a3b-1c2d3e4f5a6b"
+
+    Forbidden:
+      description: >-
+        Forbidden (KindForbidden). The user is known, but lacks permission:
+        the required role is missing.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "FORBIDDEN"
+              message: "Insufficient permissions: role 'admin' is required"
+              request_id: "9b2f6c1e-4d7a-4f5e-8a3b-1c2d3e4f5a6b"
+
+    NotFound:
+      description: Not Found (KindNotFound). The requested entity does not exist.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "USER_NOT_FOUND"
+              message: "User not found"
+              request_id: "9b2f6c1e-4d7a-4f5e-8a3b-1c2d3e4f5a6b"
+
+    Conflict:
+      description: >-
+        Conflict (KindConflict). The current state does not allow the operation:
+        for example, a user with this email already exists.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "USER_ALREADY_EXISTS"
+              message: "Operation conflicts with current state: user with this email already exists"
+              request_id: "9b2f6c1e-4d7a-4f5e-8a3b-1c2d3e4f5a6b"
+
+    ServiceUnavailable:
+      description: >-
+        Service Unavailable (KindUnavailable). A dependency is unavailable
+        or the circuit breaker is open. The request can be retried.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "SERVICE_UNAVAILABLE"
+              message: "A dependent service is temporarily unavailable, please retry later"
+              request_id: "9b2f6c1e-4d7a-4f5e-8a3b-1c2d3e4f5a6b"
+
+    InternalError:
+      description: >-
+        Internal Server Error (KindInternal). Any other failure:
+        database error, unexpected bug.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "INTERNAL_ERROR"
+              message: "An internal server error occurred"
+              request_id: "9b2f6c1e-4d7a-4f5e-8a3b-1c2d3e4f5a6b"
