@@ -1,0 +1,404 @@
+openapi: 3.0.3
+info:
+  title: Payment Service API
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8084
+
+tags:
+  - name: Wallet
+  - name: Operations
+
+security:
+  - bearerAuth: []
+
+paths:
+  /v1/wallet/balance:
+    get:
+      tags: [Wallet]
+      operationId: getBalance
+      summary: Баланс кошелька
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Balance'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Internal'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+
+  /v1/wallet/topups:
+    post:
+      tags: [Wallet]
+      operationId: createTopUp
+      summary: Пополнение кошелька (заглушка)
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TopUpRequest'
+            example:
+              amount: 150000
+              currency: RUB
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+        '400':
+          $ref: '#/components/responses/Invalid'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/Internal'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+
+  /v1/wallet/operations:
+    get:
+      tags: [Operations]
+      operationId: listOperations
+      summary: История операций
+      parameters:
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/OperationType'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/OperationStatus'
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationList'
+        '400':
+          $ref: '#/components/responses/Invalid'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/Internal'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+
+  /v1/wallet/operations/{operation_id}:
+    get:
+      tags: [Operations]
+      operationId: getOperation
+      summary: Операция по идентификатору
+      parameters:
+        - name: operation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+        '400':
+          $ref: '#/components/responses/Invalid'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Internal'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+
+  headers:
+    RequestId:
+      schema:
+        type: string
+
+  schemas:
+    Currency:
+      type: string
+      pattern: '^[A-Z]{3}$'
+      example: RUB
+
+    Balance:
+      type: object
+      required: [amount, currency, updated_at]
+      properties:
+        amount:
+          type: integer
+          format: int64
+          example: 150000
+        currency:
+          $ref: '#/components/schemas/Currency'
+        updated_at:
+          type: string
+          format: date-time
+
+    TopUpRequest:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount:
+          type: integer
+          format: int64
+          minimum: 1
+          example: 150000
+        currency:
+          $ref: '#/components/schemas/Currency'
+
+    OperationType:
+      type: string
+      enum: [topup, payment, refund]
+
+    OperationStatus:
+      type: string
+      enum: [pending, completed, failed]
+
+    OperationDirection:
+      type: string
+      enum: [credit, debit]
+
+    Operation:
+      type: object
+      required: [id, type, status, direction, amount, currency, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          $ref: '#/components/schemas/OperationType'
+        status:
+          $ref: '#/components/schemas/OperationStatus'
+        direction:
+          $ref: '#/components/schemas/OperationDirection'
+        amount:
+          type: integer
+          format: int64
+          minimum: 1
+        currency:
+          $ref: '#/components/schemas/Currency'
+        balance_after:
+          type: integer
+          format: int64
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    OperationList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Operation'
+        next_cursor:
+          type: string
+          nullable: true
+
+    ErrorBody:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: invalid_amount
+        message:
+          type: string
+          example: amount must be greater than zero
+        request_id:
+          type: string
+          example: 7d1c0f4e-3b0a-4b7e-9d52-1a5c2f1c9a10
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorBody'
+
+  responses:
+    Invalid:
+      description: Bad Request
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: invalid_argument
+              message: amount must be greater than zero
+              request_id: 7d1c0f4e-3b0a-4b7e-9d52-1a5c2f1c9a10
+
+    Unauthenticated:
+      description: Unauthorized
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: unauthenticated
+              message: missing or invalid access token
+              request_id: 7d1c0f4e-3b0a-4b7e-9d52-1a5c2f1c9a10
+
+    Forbidden:
+      description: Forbidden
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: forbidden
+              message: access to the wallet is denied
+              request_id: 7d1c0f4e-3b0a-4b7e-9d52-1a5c2f1c9a10
+
+    NotFound:
+      description: Not Found
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: not_found
+              message: operation not found
+              request_id: 7d1c0f4e-3b0a-4b7e-9d52-1a5c2f1c9a10
+
+    Conflict:
+      description: Conflict
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: idempotency_key_conflict
+              message: idempotency key was already used with a different request
+              request_id: 7d1c0f4e-3b0a-4b7e-9d52-1a5c2f1c9a10
+
+    Unavailable:
+      description: Service Unavailable
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: unavailable
+              message: service temporarily unavailable
+              request_id: 7d1c0f4e-3b0a-4b7e-9d52-1a5c2f1c9a10
+
+    Internal:
+      description: Internal Server Error
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: internal
+              message: internal server error
+              request_id: 7d1c0f4e-3b0a-4b7e-9d52-1a5c2f1c9a10

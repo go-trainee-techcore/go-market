@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package payment.v1.grpc;
+
+import "google/protobuf/timestamp.proto";
+
+service PaymentService {
+  rpc Charge(ChargeRequest) returns (ChargeResponse);
+  rpc Refund(RefundRequest) returns (RefundResponse);
+}
+
+message Money {
+  int64 amount = 1;
+  string currency = 2;
+}
+
+message ChargeRequest {
+  string order_id = 1;
+  string user_id = 2;
+  Money amount = 3;
+}
+
+message ChargeResponse {
+  string operation_id = 1;
+  string order_id = 2;
+  string user_id = 3;
+  Money amount = 4;
+  Money balance_after = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message RefundRequest {
+  string order_id = 1;
+}
+
+message RefundResponse {
+  string operation_id = 1;
+  string charge_operation_id = 2;
+  string order_id = 3;
+  string user_id = 4;
+  Money amount = 5;
+  Money balance_after = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
