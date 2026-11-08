@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package catalog.v1;
+
+service CatalogService {
+  rpc Reserve(ReserveRequest) returns (ReserveResponse);
+  rpc ConfirmReservation(ConfirmReservationRequest) returns (ConfirmReservationResponse);
+  rpc ReleaseReservation(ReleaseReservationRequest) returns (ReleaseReservationResponse);
+  rpc GetProductsInfo(GetProductsInfoRequest) returns (GetProductsInfoResponse);
+}
+
+message OrderItem {
+  string product_id = 1;
+  int32 quantity = 2;
+}
+
+message ProductInfo {
+  string product_id = 1;
+  int64 price = 2;
+  int32 stock = 3;
+}
+
+message ReserveRequest {
+  string order_id = 1;
+  repeated OrderItem items = 2;
+}
+
+message ReserveResponse {
+  bool success = 1;
+}
+
+message ConfirmReservationRequest {
+  string order_id = 1;
+}
+
+message ConfirmReservationResponse {
+  bool success = 1;
+}
+
+message ReleaseReservationRequest {
+  string order_id = 1;
+}
+
+message ReleaseReservationResponse {
+  bool success = 1;
+}
+
+message GetProductsInfoRequest {
+  repeated string product_ids = 1;
+}
+
+message GetProductsInfoResponse {
+  repeated ProductInfo products = 1;
+}

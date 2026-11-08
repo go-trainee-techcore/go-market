@@ -1,0 +1,361 @@
+openapi: 3.1.1
+
+info:
+  title: GoMarket Catalog API
+  description: API catalog for managing products, categories, and inventory.
+  version: 0.0.1
+
+servers:
+  -url: https://localcost:8080/api/v1
+
+tags:
+  - name: Public Products
+    description: Public catalog`s methods
+  - name: Manager
+    description: Product and Inventory Management
+
+
+
+paths:
+  /products:
+    get:
+      tags:
+        - Public Products
+      summary: Get a list of products
+      parameters:
+        - name: category_id
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: min_price
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: max_price
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Successful response with product list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+        '400':
+                    description: Bad request (invalid parameters)
+  /products/{id}:
+    get:
+      tags:
+        - Public Products
+      summary: Get products details by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Products details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Product not found
+
+
+  /manager/products:
+    post:
+      tags:
+        - Manager
+      summary: Create a new product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '201':
+          description: Product successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Invalid input data
+
+  /manager/products/{id}:
+    put:
+      tags:
+        - Manager
+      summary: Update product information
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductRequest'
+      responses:
+        '200':
+          description: Product successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+    delete:
+      summary: Delete a product (Manager)
+      description: Removes a product from the catalog.
+      tags:
+        - Manager
+      parameters:
+          - name: id
+            in: path
+            required: true
+            schema:
+              type: string
+      responses:
+        '204':
+          description: Product successfully deleted
+        '404':
+          description: Product not found
+
+
+  /manager/products/{id}/stock:
+      patch:
+        tags:
+          - Manager
+        summary: Update product stock
+        parameters:
+          - name: id
+            in: path
+            required: true
+            schema:
+              type: string
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - stock
+                properties:
+                  stock:
+                    type: integer
+                    minimum: 0
+        responses:
+          '200':
+            description: Stock successfully updated
+          '400':
+            description: Invalid stock value (negative number)
+          '404':
+            description: Product not found
+
+
+  /manager/categories:
+      get:
+        tags:
+          - Manager
+        summary: Get all categories
+        responses:
+          '200':
+            description: List of categories
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Category'
+      post:
+        tags:
+          - Manager
+        summary: Create a category
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - name
+                properties:
+                  name:
+                    type: string
+        responses:
+          '201':
+            description: Category created
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Category'
+
+  /manager/categories/{id}:
+      put:
+        tags:
+          - Manager
+        summary: Update category
+        parameters:
+          - name: id
+            in: path
+            required: true
+            schema:
+              type: string
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - name
+                properties:
+                  name:
+                    type: string
+        responses:
+          '200':
+            description: Category updated
+      delete:
+        tags:
+          - Manager
+        summary: Delete category
+        parameters:
+          - name: id
+            in: path
+            required: true
+            schema:
+              type: string
+        responses:
+          '204':
+            description: Category deleted
+
+
+
+components:
+    schemas:
+      EntityMeta:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+            examples:
+              - "d3b07384-d113-4ec2-a49f-b3a1a74e5088"
+          created_at:
+            type: string
+            format: date-time
+            examples:
+              - "2026-11-03T12:00:00Z"
+
+      NamedEntity:
+        type: object
+        required:
+          - name
+        properties:
+          name:
+            type: string
+            examples:
+              - "Mechanical Keyboard"
+
+      Product:
+        allOf:
+          - $ref: '#/components/schemas/EntityMeta'
+          - $ref: '#/components/schemas/NamedEntity'
+          - type: object
+            properties:
+              description:
+                type: string
+                examples:
+                  - "Wireless RGB mechanical keyboard with brown switches"
+              price:
+                type: integer
+                description: Price in minimal currency units (e.g. cents)
+                examples:
+                  - 7500
+              category_id:
+                type: string
+                examples:
+                  - "cat-uuid-1234"
+              stock:
+                type: integer
+                minimum: 0
+                examples:
+                  - 15
+
+      Category:
+        allOf:
+          - $ref: '#/components/schemas/EntityMeta'
+          - $ref: '#/components/schemas/NamedEntity'
+
+      CreateProductRequest:
+        allOf:
+          - $ref: '#/components/schemas/NamedEntity'
+          - type: object
+            required:
+              - price
+              - category_id
+              - stock
+            properties:
+              description:
+                type: string
+                example: "Wireless RGB mechanical keyboard"
+              price:
+                type: integer
+                examples:
+                  - 7500
+              category_id:
+                type: string
+                examples:
+                  - "cat-uuid-1234"
+              stock:
+                type: integer
+                minimum: 0
+                examples:
+                  - 15
+
+      UpdateProductRequest:
+        type: object
+        properties:
+          name:
+            type: string
+            examples:
+              - "Updated Keyboard Name"
+          description:
+            type: string
+            examples:
+              - "Updated description"
+          price:
+            type: integer
+            examples:
+              - 8000
+          category_id:
+            type: string
+            examples:
+              - "cat-uuid-1234"
