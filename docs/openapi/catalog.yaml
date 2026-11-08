@@ -43,13 +43,13 @@ paths:
           required: false
           schema:
             type: integer
-          default: 20
+            default: 20
         - name: offset
           in: query
           required: false
           schema:
             type: integer
-          default: 0
+            default: 0
       responses:
         '200':
           description: Successful response with product list
@@ -123,7 +123,7 @@ paths:
               $ref: '#/components/schemas/UpdateProductRequest'
       responses:
         '200':
-          desription: Product successfully updated
+          description: Product successfully updated
           content:
             application/json:
               schema:
@@ -258,7 +258,7 @@ paths:
 
 
 
-  components:
+components:
     schemas:
       EntityMeta:
         type: object
@@ -266,11 +266,13 @@ paths:
           id:
             type: string
             format: uuid
-            example: "d3b07384-d113-4ec2-a49f-b3a1a74e5088"
+            examples:
+              - "d3b07384-d113-4ec2-a49f-b3a1a74e5088"
           created_at:
             type: string
             format: date-time
-            example: "2026-11-03T12:00:00Z"
+            examples:
+              - "2026-11-03T12:00:00Z"
 
       NamedEntity:
         type: object
@@ -279,7 +281,8 @@ paths:
         properties:
           name:
             type: string
-            example: "Mechanical Keyboard"
+            examples:
+              - "Mechanical Keyboard"
 
       Product:
         allOf:
@@ -289,18 +292,22 @@ paths:
             properties:
               description:
                 type: string
-                example: "Wireless RGB mechanical keyboard with brown switches"
+                examples:
+                  - "Wireless RGB mechanical keyboard with brown switches"
               price:
                 type: integer
                 description: Price in minimal currency units (e.g. cents)
-                example: 7500
+                examples:
+                  - 7500
               category_id:
                 type: string
-                example: "cat-uuid-1234"
+                examples:
+                  - "cat-uuid-1234"
               stock:
                 type: integer
                 minimum: 0
-                example: 15
+                examples:
+                  - 15
 
       Category:
         allOf:
@@ -321,27 +328,34 @@ paths:
                 example: "Wireless RGB mechanical keyboard"
               price:
                 type: integer
-                example: 7500
+                examples:
+                  - 7500
               category_id:
                 type: string
-                example: "cat-uuid-1234"
+                examples:
+                  - "cat-uuid-1234"
               stock:
                 type: integer
                 minimum: 0
-                example: 15
+                examples:
+                  - 15
 
       UpdateProductRequest:
         type: object
         properties:
           name:
             type: string
-            example: "Updated Keyboard Name"
+            examples:
+              - "Updated Keyboard Name"
           description:
             type: string
-            example: "Updated description"
+            examples:
+              - "Updated description"
           price:
             type: integer
-            example: 8000
+            examples:
+              - 8000
           category_id:
             type: string
-            example: "cat-uuid-1234"
+            examples:
+              - "cat-uuid-1234"
