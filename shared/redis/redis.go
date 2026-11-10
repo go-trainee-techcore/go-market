@@ -68,8 +68,6 @@ func (c *Client) Close() error {
 	return c.rdb.Close()
 }
 
-// Get returns an error that implies going into db
-// Error check through error.Is.
 func (c *Client) Get(ctx context.Context, key string) (string, *apperr.Error) {
 
 	val, err := c.rdb.Get(ctx, key).Result()
