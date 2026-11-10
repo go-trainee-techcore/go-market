@@ -3,9 +3,7 @@ package redis
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
-	"sync/atomic"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -34,13 +32,9 @@ type Config struct {
 }
 
 type Client struct {
-	rdb      *redis.Client
-	ttl      time.Duration
-	cooldown time.Duration
-	log      *slog.Logger
-
-	downUntil atomic.Int64 // unix nano; до этого момента Redis обходится
-	now       func() time.Time
+	rdb *redis.Client
+	ttl time.Duration
+	log *slog.Logger
 }
 
 func NewClient(ctx context.Context, config Config, logger *slog.Logger) (*Client, *apperr.Error) {
@@ -56,13 +50,14 @@ func NewClient(ctx context.Context, config Config, logger *slog.Logger) (*Client
 			WriteTimeout: config.WriteTimeout,
 			MaxRetries:   config.MaxRetries,
 		}),
-		ttl:      config.TTL,
-		cooldown: config.FailureCooldown,
-		log:      logger,
-		now:      time.Now,
+		ttl: config.TTL,
+		log: logger,
 	}
 
-	_ = c.ping(ctx)
+	err := c.rdb.Ping(ctx).Err()
+	if err != nil {
+		return nil, apperr.Wrap(ErrRedisUnavailable, apperr.KindInternal, "500", "Redis client is :"+err.Error())
+	}
 	return c, nil
 }
 
@@ -75,17 +70,14 @@ func (c *Client) Close() error {
 
 // Get returns an error that implies going into db
 // Error check through error.Is.
-func (c *Client) Get(ctx context.Context, key string) ([]byte, *apperr.Error) {
-	if !c.available() {
-		return nil, apperr.Wrap(ErrRedisUnavailable, apperr.KindInternal, "500", "Redis client is unavailable")
-	}
+func (c *Client) Get(ctx context.Context, key string) (string, *apperr.Error) {
 
 	val, err := c.rdb.Get(ctx, key).Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
-			return nil, apperr.Wrap(ErrKeyNotFound, apperr.KindNotFound, "404", "Key not found")
+			return "", apperr.Wrap(ErrKeyNotFound, apperr.KindNotFound, "404", "Key not found")
 		}
-		return nil, apperr.Wrap(err, apperr.KindInternal, "500", "Failed to connect to read value from redis: "+err.Error())
+		return "", apperr.Wrap(err, apperr.KindInternal, "500", "Failed to connect to read value from redis: "+err.Error())
 	}
 	return val, nil
 }
@@ -98,35 +90,4 @@ func (c *Client) Set(ctx context.Context, key string, val any) *apperr.Error {
 		return apperr.Wrap(err, apperr.KindInternal, "500", "Failed to write to redis: "+err.Error())
 	}
 	return nil
-}
-
-func (c *Client) ping(ctx context.Context) error {
-	if c == nil {
-		return ErrRedisUnavailable
-	}
-	pctx, cancel := context.WithTimeout(ctx, pingTimeout)
-	defer cancel()
-
-	if err := c.rdb.Ping(pctx).Err(); err != nil {
-		return c.fail(ctx, "ping", err) // родительский ctx: наш таймаут — это сбой
-	}
-	c.downUntil.Store(0)
-	return nil
-}
-
-func (c *Client) fail(ctx context.Context, op string, err error) error {
-	if ctx.Err() != nil {
-		return fmt.Errorf("redis %s: %w", op, ctx.Err())
-	}
-	c.downUntil.Store(c.now().Add(c.cooldown).UnixNano())
-	c.log.Warn("redis failure, bypassing cache",
-		"op", op, "cooldown", c.cooldown, "error", err)
-	return fmt.Errorf("%w: %s: %v", ErrRedisUnavailable, op, err)
-}
-
-func (c *Client) available() bool {
-	if c == nil {
-		return false
-	}
-	return c.now().UnixNano() >= c.downUntil.Load()
 }
