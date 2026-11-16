@@ -233,11 +233,11 @@ func TestClient_Get(t *testing.T) {
 				require.NotNil(t, aerr)
 				assert.ErrorIs(t, aerr, tt.wantErr)
 				assert.Empty(t, got)
-				if tt.wantErr == ErrRedisUnavailable {
+				if errors.Is(tt.wantErr, ErrRedisUnavailable) {
 					assert.NotErrorIs(t, aerr, ErrKeyNotFound, "сбой Redis не должен выглядеть как промах")
 				}
 				// NEW: промах предохранитель не взводит, сбой — взводит.
-				assert.Equal(t, tt.wantErr == ErrKeyNotFound, c.available())
+				assert.Equal(t, errors.Is(tt.wantErr, ErrKeyNotFound), c.available())
 				return
 			}
 

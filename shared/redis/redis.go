@@ -171,7 +171,8 @@ func bypassed() *apperr.Error {
 }
 
 // unavailable оборачивает ErrRedisUnavailable: исходная причина остаётся в
-// cause (для логов), а в публичное сообщение попадает только константа.
+// цепочке ошибок (errors.Is/errors.As и логи), а в публичное сообщение
+// попадает только константа msg.
 func unavailable(err error, msg string) *apperr.Error {
-	return apperr.Wrap(fmt.Errorf("%w: %v", ErrRedisUnavailable, err), apperr.KindInternal, "500", msg)
+	return apperr.Wrap(fmt.Errorf("%w: %w", ErrRedisUnavailable, err), apperr.KindInternal, "500", msg)
 }
