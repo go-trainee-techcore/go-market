@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package events.v1;
+
+import "events/v1/metadata.proto";
+
+option go_package = "github.com/go-trainee-techcore/go-market/proto/gen/events/v1;eventsv1";
+
+// Заказ оплачен и подтверждён (последний шаг саги, статус completed).
+//
+// Топик:             order.paid.v1
+// Ключ партиции:     order_id
+// Публикует:         Order
+// Слушает:           пока никто (Notification и аналитика — в бэклоге)
+message OrderPaid {
+  EventMetadata metadata = 1;
+
+  string order_id = 2;
+  string user_id = 3;
+
+  // Оплаченная сумма в минимальных единицах валюты (копейки).
+  int64 amount_minor = 4;
+}

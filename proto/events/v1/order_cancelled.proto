@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package events.v1;
+
+import "events/v1/metadata.proto";
+
+option go_package = "github.com/go-trainee-techcore/go-market/proto/gen/events/v1;eventsv1";
+
+// Причина отмены заказа.
+enum OrderCancelReason {
+  ORDER_CANCEL_REASON_UNSPECIFIED = 0;
+  // Catalog.Reserve отклонил резерв: товара нет.
+  ORDER_CANCEL_REASON_OUT_OF_STOCK = 1;
+  // Payment.Charge вернул нехватку средств; резерв уже снят компенсацией.
+  ORDER_CANCEL_REASON_INSUFFICIENT_FUNDS = 2;
+  // Платёж не прошёл по другой причине.
+  ORDER_CANCEL_REASON_PAYMENT_FAILED = 3;
+  // Пользователь отменил заказ до статуса paid.
+  ORDER_CANCEL_REASON_CANCELLED_BY_USER = 4;
+  // Резерв протух (~15 минут), заказ не успели оплатить.
+  ORDER_CANCEL_REASON_RESERVATION_EXPIRED = 5;
+  // Сага не смогла завершиться и была компенсирована фоновым процессом.
+  ORDER_CANCEL_REASON_INTERNAL_ERROR = 6;
+}
+
+// Заказ отменён (статус cancelled; компенсации уже выполнены).
+//
+// Топик:             order.cancelled.v1
+// Ключ партиции:     order_id
+// Публикует:         Order
+// Слушает:           пока никто (Notification и аналитика — в бэклоге)
+message OrderCancelled {
+  EventMetadata metadata = 1;
+
+  string order_id = 2;
+  string user_id = 3;
+  OrderCancelReason reason = 4;
+}
