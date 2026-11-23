@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package events.v1;
+
+import "events/v1/metadata.proto";
+
+option go_package = "github.com/go-trainee-techcore/go-market/proto/gen/events/v1;eventsv1";
+
+// Пользователь зарегистрирован.
+//
+// Топик:             user.registered.v1
+// Ключ партиции:     user_id
+// Публикует:         Identity
+// Слушает:           Payment (создаёт кошелёк)
+//
+// Консьюмер идемпотентен: повтор не должен создать второй кошелёк. Защита —
+// проверка event_id и уникальность кошелька по user_id.
+//
+// В событии намеренно нет email, телефона и имени: консьюмеру нужен только
+// идентификатор, а персональные данные не должны расходиться по топикам.
+message UserRegistered {
+  EventMetadata metadata = 1;
+
+  string user_id = 2;
+}

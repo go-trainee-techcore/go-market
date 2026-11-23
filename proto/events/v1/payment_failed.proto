@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package events.v1;
+
+import "events/v1/metadata.proto";
+
+option go_package = "github.com/go-trainee-techcore/go-market/proto/gen/events/v1;eventsv1";
+
+// Причина неудачи платежа (доменные ошибки Payment).
+enum PaymentFailureReason {
+  PAYMENT_FAILURE_REASON_UNSPECIFIED = 0;
+  // На кошельке не хватает средств.
+  PAYMENT_FAILURE_REASON_INSUFFICIENT_FUNDS = 1;
+  // У пользователя нет кошелька.
+  PAYMENT_FAILURE_REASON_WALLET_NOT_FOUND = 2;
+}
+
+// Списание за заказ не удалось по бизнес-причине.
+// Временные сбои (Unavailable, таймаут) событием не становятся: их ретраят.
+//
+// Топик:             payment.failed.v1
+// Ключ партиции:     order_id
+// Публикует:         Payment, через outbox (см. payment_completed.proto)
+// Слушает:           Order
+//
+// Консьюмер идемпотентен: повтор не должен второй раз запустить компенсации.
+message PaymentFailed {
+  EventMetadata metadata = 1;
+
+  string order_id = 2;
+  string user_id = 3;
+
+  // Сумма, которую пытались списать, в минимальных единицах валюты (копейки).
+  int64 amount_minor = 4;
+
+  PaymentFailureReason reason = 5;
+}

@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package events.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/go-trainee-techcore/go-market/proto/gen/events/v1;eventsv1";
+
+// Сервис, опубликовавший событие.
+enum EventSource {
+  EVENT_SOURCE_UNSPECIFIED = 0;
+  EVENT_SOURCE_IDENTITY = 1;
+  EVENT_SOURCE_ORDER = 2;
+  EVENT_SOURCE_PAYMENT = 3;
+}
+
+// Общий конверт: первое поле (metadata = 1) каждого события Kafka.
+//
+// Доставка в Kafka «хотя бы один раз», поэтому одно и то же событие может
+// прийти консьюмеру дважды. Консьюмер находит повтор по event_id.
+message EventMetadata {
+  // Уникальный идентификатор события (UUID). Ключ идемпотентности консьюмера.
+  //
+  // Генерируется ОДИН раз, когда событие создаётся: у Payment это момент записи
+  // строки в outbox, а не момент отправки в Kafka. Тогда повторная публикация
+  // того же события после сбоя несёт тот же event_id, и консьюмер её отбросит.
+  string event_id = 1;
+
+  // Когда произошёл бизнес-факт (заказ создан, деньги списаны). Это не время
+  // отправки в Kafka и не время получения консьюмером.
+  google.protobuf.Timestamp occurred_at = 2;
+
+  // Кто опубликовал событие.
+  EventSource source = 3;
+
+  // Идентификатор исходного запроса (X-Request-Id из Gateway). По нему событие
+  // находится в логах вместе с остальной цепочкой. Может быть пустым, если
+  // событие не вызвано HTTP-запросом (например, его породил фоновый процесс).
+  string request_id = 4;
+}

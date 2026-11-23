@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package events.v1;
+
+import "events/v1/metadata.proto";
+
+option go_package = "github.com/go-trainee-techcore/go-market/proto/gen/events/v1;eventsv1";
+
+// Деньги за заказ списаны.
+//
+// Топик:             payment.completed.v1
+// Ключ партиции:     order_id
+// Публикует:         Payment, через outbox: строка пишется в той же
+//                    транзакции, что и списание, в Kafka её отправляет
+//                    фоновый процесс
+// Слушает:           Order
+//
+// Консьюмер идемпотентен: повтор не должен сдвинуть сагу второй раз.
+message PaymentCompleted {
+  EventMetadata metadata = 1;
+
+  string order_id = 2;
+  string user_id = 3;
+
+  // Списанная сумма в минимальных единицах валюты (копейки).
+  int64 amount_minor = 4;
+}

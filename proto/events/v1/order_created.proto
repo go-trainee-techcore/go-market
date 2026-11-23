@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package events.v1;
+
+import "events/v1/metadata.proto";
+
+option go_package = "github.com/go-trainee-techcore/go-market/proto/gen/events/v1;eventsv1";
+
+// Заказ создан (шаг 1 саги).
+//
+// Топик:             order.created.v1
+// Ключ партиции:     order_id
+// Публикует:         Order
+// Слушает:           Cart (очищает корзину)
+//
+// Консьюмер идемпотентен: повторная доставка не должна очистить корзину,
+// которую пользователь уже начал собирать заново. Защита — проверка event_id
+// и cart_id: очищается только та корзина, из которой оформлен заказ.
+message OrderCreated {
+  EventMetadata metadata = 1;
+
+  string order_id = 2;
+  string user_id = 3;
+
+  // Корзина из снапшота (Cart.GetCartSnapshot), по которой создан заказ.
+  string cart_id = 4;
+
+  // Сумма заказа в минимальных единицах валюты (копейки), без дробей.
+  int64 total_minor = 5;
+}
