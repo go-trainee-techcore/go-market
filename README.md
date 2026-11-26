@@ -1,5 +1,6 @@
 # GoMarket
 
+
 > **Начало работы:** [docs/onboarding.md](docs/onboarding.md) — устройство проекта, окружение, процесс. Общие пакеты — [shared/README.md](shared/README.md).
 
 ## Актуальный скоуп

@@ -13,6 +13,7 @@
 | [`metrics`](#metrics--метрики) | RED-метрики HTTP и ручка `/metrics` |
 | [`config`](#config--конфигурация) | загрузка конфигурации сервиса из переменных окружения |
 | [`postgres`](#postgres--база-данных) | подключение к PostgreSQL с едиными настройками пула |
+| [`grpcx`](#grpcx--grpc-обвязка) | перехватчики для gRPC: `request_id`, логи, RED-метрики, recover, таймауты и маппинг ошибок |
 
 Живой пример использования всех пакетов — [`services/example`](../services/example).
 
@@ -175,8 +176,9 @@ return fmt.Errorf("получение корзины: %w", entity.ErrCartNotFoun
 `<сущность>_<что_случилось>`: `cart_not_found`, `price_negative`,
 `order_already_paid`. Сообщение меняй свободно.
 
-**gRPC пока не поддержан.** Перевода `Kind` в gRPC-коды ещё нет — он появится
-вместе с первым межсервисным вызовом (см. [ниже](#чего-в-shared-пока-нет)).
+**Маппинг в gRPC.** Перевод `Kind` в gRPC-коды (`ToGRPCCode`, `GRPCStatus`)
+и обратно (`FromGRPCError`) реализован для межсервисных вызовов вместе с
+перехватчиками из пакета [`grpcx`](#grpcx--grpc-обвязка).
 
 ---
 
@@ -243,6 +245,23 @@ log.InfoContext(ctx, "позиция добавлена",
 ```
 
 `request_id` клиент передаёт в баг-репорт, и по нему запрос находится в логах.
+
+## grpcx — gRPC-обвязка
+
+Общий набор перехватчиков (interceptors) для межсервисного gRPC-взаимодействия.
+
+### Сервер (`UnaryServerInterceptor`)
+
+- Достаёт `x-request-id` из входящих метаданных gRPC (или генерирует новый UUID) и кладёт в `context` через `logging.WithRequestID`.
+- Перехватывает паники (`recover`), логирует их на уровне `Error` и возвращает `codes.Internal`, чтобы не ронять процесс.
+- Считает RED-метрики (`grpc_server_requests_total`, `grpc_server_request_duration_seconds`) и пишет лог вызова с длительностью и статусом.
+- Переводит доменные ошибки `*apperr.Error` в gRPC-статусы через `apperr.ToGRPCCode`.
+
+### Клиент (`UnaryClientInterceptor`)
+
+- Если у контекста ещё нет дедлайна, ставит таймаут по умолчанию (`DefaultClientTimeout`, по умолчанию `5s`).
+- Берёт `request_id` из контекста (`logging.RequestID`) и пробрасывает в исходящие метаданные `x-request-id`.
+- Переводит полученные gRPC-ошибки обратно в доменные `*apperr.Error` через `apperr.FromGRPCError`.
 
 ### Функции
 
